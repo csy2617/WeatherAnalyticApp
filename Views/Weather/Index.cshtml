@@ -1,0 +1,132 @@
+@model WeatherData
+
+@{
+    ViewData["Title"] = "Weather Data";
+}
+
+<div class="container">
+    <h2>Weather in @Model.City</h2>
+    <div class="table-responsive">
+        <table class="table">
+            <tr>
+                <th>Temperature</th>
+                <td>@Model.Temperature &deg;C</td>
+            </tr>
+            <tr>
+                <th>Humidity</th>
+                <td>@Model.Humidity %</td>
+            </tr>
+            <tr>
+                <th>Wind Speed</th>
+                <td>@Model.WindSpeed m/s</td>
+            </tr>
+            <tr>
+                <th>Date Fetched</th>
+                <td>@Model.DateFetched</td>
+            </tr>
+        </table>
+    </div>
+
+    <form method="get">
+        <label for="city">Enter City:</label>
+        <input type="text" id="city" name="city" placeholder="City name" class="form-control" />
+        <button type="submit" class="btn btn-primary mt-2">Get Weather</button>
+    </form>
+
+    <!-- Chart for Analytics -->
+    <div class="container mt-4">
+    <h2>Weather Data for All Cities</h2>
+    <div class="card">
+        <div class="card-body">
+            <canvas id="weatherChart"></canvas>
+        </div>
+    </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Function to fetch all weather data for all cities and render the chart
+ async function fetchAllWeatherData() {
+    try {
+        const response = await fetch('/Weather/Chart'); // Call the Chart action
+        const weatherData = await response.json();
+        console.log("Fetched Weather Data:", weatherData);
+
+        // Ensure that the weatherData is not empty
+        if (weatherData && weatherData.length > 0) {
+            // Process the data for Chart.js
+            const labels = weatherData[0]?.temperatures?.map(item => item.date) || [];
+            const datasets = weatherData.map(cityData => ({
+                label: cityData.city || 'Unknown City', // Use lowercase 'city'
+                data: cityData.temperatures?.map(item => item.temperature) || [], // Use lowercase 'temperatures'
+                borderColor: getRandomColor(),
+                fill: false
+            }));
+
+            console.log("Processed Labels:", labels);
+            console.log("Processed Datasets:", datasets);
+
+            // Render the chart
+            renderChart(labels, datasets);
+        } else {
+            console.error('No weather data available');
+        }
+    } catch (error) {
+        console.error('Error fetching weather data:', error);
+    }
+}
+
+
+
+    // Function to render the Chart.js chart with the fetched data
+    function renderChart(labels, datasets) {
+        var ctx = document.getElementById('weatherChart').getContext('2d');
+        var weatherChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,  // Dates as labels on X-axis
+                datasets: datasets  // Datasets for each city
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'category',  // X-axis shows the dates
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                    beginAtZero: true, // Start at zero
+                    min: 0, // Set the minimum Y-axis value (0°C)
+                    max: 50, // Set the maximum Y-axis value (50°C)
+                    ticks: {
+                        stepSize: 5 // Set the interval between ticks
+                    }
+                    }
+                }
+            }
+        });
+    }
+
+    // Helper function to generate random colors for the lines
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    // Fetch weather data for all cities when the page loads
+    fetchAllWeatherData();
+</script>
